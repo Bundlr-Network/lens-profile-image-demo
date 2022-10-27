@@ -197,6 +197,7 @@ const useHome = () => {
 
   const changePictureRequest = async () => {
     try {
+      console.log("1")
       const pictureResponse = await client.mutate({
         mutation: CHANGE_PROFILE_IMAGE_MUTATION,
         variables: {
@@ -210,12 +211,19 @@ const useHome = () => {
         }
       })
 
+      console.log("2")
 
       const result = pictureResponse.data!.createSetProfileImageURITypedData
 
+      console.log("3")
+
       const typedData = result.typedData;
 
+      console.log("4")
+
       signTypedData({ domain: typedData.domain, types: typedData.types, value: typedData.value })
+
+      console.log("5")
 
     } catch (error) {
       toast.error(
