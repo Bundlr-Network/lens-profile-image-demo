@@ -11,10 +11,10 @@ import {
   InputLeftElement,
   Stack,
   Text,
-  VStack
-} from '@chakra-ui/react'
+  VStack,
+} from '@chakra-ui/react';
 import { SVGProps, useEffect, useState } from 'react'
-import { chain, configureChains, useAccount, useConnect } from 'wagmi'
+import { useAccount, useConnect } from 'wagmi';
 
 import AUTH_AUTHENTICATE_MUTATION from '@/lib/graphql/queries/auth-authenticate'
 import AUTH_CHALLENGE_QUERY from '@/lib/graphql/queries/auth-challenge'
@@ -26,10 +26,8 @@ import GET_PROFILE_QUERY from '@/lib/graphql/queries/get-profile'
 import { GetServerSideProps } from 'next'
 import { Profile } from '@/lib/graphql/types/profile'
 import client from '@/lib/graphql'
-import { connect } from 'http2'
 import { gql } from '@apollo/client'
 import { useSignMessage } from 'wagmi'
-import { verifyMessage } from 'ethers/lib/utils'
 
 const BundlrIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -98,10 +96,7 @@ const useHome = () => {
 
   const { connect, connectors } = useConnect()
   const { address, isConnected } = useAccount()
-  const {
-    data: signedMessage,
-    signMessage
-  } = useSignMessage()
+  const { data: signedMessage, signMessage } = useSignMessage()
 
   const fetchAccountData = async () => {
     const response = await client.query({
@@ -141,7 +136,10 @@ const useHome = () => {
   useEffect(() => {
     if (!signedMessage || !address) return
 
-    console.log("🚀 ~ file: index.tsx ~ line 145 ~ useEffect ~ signedMessage", signedMessage)
+    console.log(
+      '🚀 ~ file: index.tsx ~ line 145 ~ useEffect ~ signedMessage',
+      signedMessage
+    )
 
     // mutation
     const authenticate = async () => {
@@ -166,7 +164,7 @@ const useHome = () => {
   useEffect(() => {
     if (!authSecrets || !address || !profileImageUrl) return
 
-    console.log("rodando...")
+    console.log('rodando...')
 
     const changePicture = async () => {
       const response = await client.mutate({
@@ -192,12 +190,18 @@ const useHome = () => {
     changePicture()
   }, [authSecrets])
 
-  return { pingLens, setUserName, accountData, fetchAccountData, changePicture, setProfileImageUrl }
+  return {
+    pingLens,
+    setUserName,
+    accountData,
+    fetchAccountData,
+    changePicture,
+    setProfileImageUrl
+  }
 }
 
 const HomeWrapper = (props: any) => {
   const {
-    pingLens,
     setUserName,
     accountData,
     fetchAccountData,
@@ -215,11 +219,6 @@ const HomeWrapper = (props: any) => {
         <Icon as={BundlrIcon} h={12} w={12} />
       </Flex>
       <Container maxW={'container.sm'} mt={10}>
-        {/* <Text py={"6"} fontSize={"3xl"} fontWeight="bold" textAlign={"left"}>Upload files to Bundlr 🎉</Text> */}
-
-        <Text>
-          https://qpiecooojcv5hcdoh6vbxy3hkwc5yagjvo2w3cgy2evc5uo5cfhq.arweave.net/g9BBOc5Iq9OIbj-qG-NnVYXcAMmrtW2I2NEqLtHdEU8
-        </Text>
         <VStack gap={2} shadow="lg" p={4} bg="white" rounded={'md'}>
           {!accountData?.profile?.id && (
             <>
