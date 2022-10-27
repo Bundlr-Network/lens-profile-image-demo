@@ -28,6 +28,7 @@ import { Profile } from '@/lib/graphql/types/profile'
 import client from '@/lib/graphql'
 import toast from 'react-hot-toast'
 import { useSignMessage } from 'wagmi'
+import { useSignTypedData } from 'wagmi'
 
 const BundlrIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -94,6 +95,12 @@ const useHome = () => {
   const { connect, connectors, isError } = useConnect()
   const { address, isConnected } = useAccount()
   const { data: signedMessage, signMessage } = useSignMessage()
+
+  const { signTypedData } = useSignTypedData({
+    onSuccess: (data) => {
+      console.log(data)
+    },
+  })
 
   const fetchAccountData = async () => {
     try {
@@ -190,7 +197,7 @@ const useHome = () => {
 
   const changePictureRequest = async () => {
     try {
-      await client.mutate({
+      const pictureResponse = await client.mutate({
         mutation: CHANGE_PROFILE_IMAGE_MUTATION,
         variables: {
           ProfileId: accountData?.profile.id,
@@ -202,6 +209,14 @@ const useHome = () => {
           }
         }
       })
+
+
+      const result = pictureResponse.data!.createSetProfileImageURITypedData
+
+      const typedData = result.typedData;
+
+      signTypedData({ domain: typedData.domain, types: typedData.types, value: typedData.value })
+
     } catch (error) {
       toast.error(
         `Request failed with the following error: ${(error as any).message}.`,
