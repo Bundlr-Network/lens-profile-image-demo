@@ -14,6 +14,7 @@ import {
   VStack
 } from '@chakra-ui/react'
 import { SVGProps, useEffect, useState } from 'react'
+import { ethers, utils } from 'ethers';
 import { useAccount, useConnect } from 'wagmi'
 
 import AUTH_AUTHENTICATE_MUTATION from '@/lib/graphql/queries/auth-authenticate'
@@ -24,6 +25,7 @@ import CHANGE_PROFILE_IMAGE_MUTATION from '@/lib/graphql/queries/change-profile-
 import { FaRegUserCircle } from 'react-icons/fa'
 import GET_PROFILE_QUERY from '@/lib/graphql/queries/get-profile'
 import { GetServerSideProps } from 'next'
+import LENS_HUB_ABI from '@/lib/abi/lens-hub.json'
 import { Profile } from '@/lib/graphql/types/profile'
 import client from '@/lib/graphql'
 import toast from 'react-hot-toast'
@@ -75,7 +77,10 @@ const BundlrIcon = (props: SVGProps<SVGSVGElement>) => (
 )
 
 const useHome = () => {
-  const toastErrorStyles = {
+
+  const LENS_CONTRACT = new ethers.Contract("0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d", LENS_HUB_ABI);
+
+  const TOAST_ERROR_STYLES = {
     background: '#FED7D7',
     color: 'black',
     borderRadius: '10px',
@@ -91,16 +96,13 @@ const useHome = () => {
     null
   )
   const [profileImageUrl, setProfileImageUrl] = useState<string>('')
+  const [typedData, setTypedData] = useState<any>()
 
   const { connect, connectors, isError } = useConnect()
   const { address, isConnected } = useAccount()
   const { data: signedMessage, signMessage } = useSignMessage()
 
-  const { signTypedData } = useSignTypedData({
-    onSuccess: (data) => {
-      console.log(data)
-    },
-  })
+  const { data: signedTypedDataResult, signTypedData } = useSignTypedData()
 
   const fetchAccountData = async () => {
     try {
@@ -116,7 +118,7 @@ const useHome = () => {
       toast.error(
         "Couldn't fetch account data, verify the Handler and try again.",
         {
-          style: toastErrorStyles as any
+          style: TOAST_ERROR_STYLES as any
         }
       )
     }
@@ -170,7 +172,7 @@ const useHome = () => {
         toast.error(
           'Something went wrong with your authentication, please refresh the page and try again.',
           {
-            style: toastErrorStyles as any
+            style: TOAST_ERROR_STYLES as any
           }
         )
       }
@@ -197,7 +199,7 @@ const useHome = () => {
 
   const changePictureRequest = async () => {
     try {
-      console.log("1")
+
       const pictureResponse = await client.mutate({
         mutation: CHANGE_PROFILE_IMAGE_MUTATION,
         variables: {
@@ -211,19 +213,14 @@ const useHome = () => {
         }
       })
 
-      console.log("2")
-
       const result = pictureResponse.data!.createSetProfileImageURITypedData
 
-      console.log("3")
+      const typedDataResponse = result.typedData;
 
-      const typedData = result.typedData;
 
-      console.log("4")
+      signTypedData({ domain: typedDataResponse.domain, types: typedDataResponse.types, value: typedDataResponse.value })
 
-      signTypedData({ domain: typedData.domain, types: typedData.types, value: typedData.value })
-
-      console.log("5")
+      setTypedData(typedDataResponse)
 
     } catch (error) {
       toast.error(
@@ -242,6 +239,29 @@ const useHome = () => {
       )
     }
   }
+
+  useEffect(() => {
+
+    if (!signedTypedDataResult || !address) return;
+
+    const broadcastRequest = async () => {
+
+      const { v, r, s } = utils.splitSignature((signedTypedDataResult as any)?.signature);
+
+      await LENS_CONTRACT.setProfileImageURIWithSig({
+        profileId: typedData.value.profileId,
+        imageURI: typedData.value.imageURI,
+        sig: {
+          v,
+          r,
+          s,
+          deadline: typedData.value.deadline,
+        },
+      });
+    }
+
+    broadcastRequest()
+  }, [signedTypedDataResult])
 
   useEffect(() => {
     if (!authSecrets || !address || !profileImageUrl) return
