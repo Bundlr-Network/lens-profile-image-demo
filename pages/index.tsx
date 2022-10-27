@@ -11,10 +11,10 @@ import {
   InputLeftElement,
   Stack,
   Text,
-  VStack,
-} from '@chakra-ui/react';
+  VStack
+} from '@chakra-ui/react'
 import { SVGProps, useEffect, useState } from 'react'
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect } from 'wagmi'
 
 import AUTH_AUTHENTICATE_MUTATION from '@/lib/graphql/queries/auth-authenticate'
 import AUTH_CHALLENGE_QUERY from '@/lib/graphql/queries/auth-challenge'
@@ -26,7 +26,7 @@ import GET_PROFILE_QUERY from '@/lib/graphql/queries/get-profile'
 import { GetServerSideProps } from 'next'
 import { Profile } from '@/lib/graphql/types/profile'
 import client from '@/lib/graphql'
-import { gql } from '@apollo/client'
+import toast from 'react-hot-toast'
 import { useSignMessage } from 'wagmi'
 
 const BundlrIcon = (props: SVGProps<SVGSVGElement>) => (
@@ -74,17 +74,14 @@ const BundlrIcon = (props: SVGProps<SVGSVGElement>) => (
 )
 
 const useHome = () => {
-  const query = `
-  query {
-    ping
-  }
-  `
-
-  const pingLens = async () => {
-    const response = await client.query({
-      query: gql(query)
-    })
-    console.log('Lens example data: ', response)
+  const toastErrorStyles = {
+    background: '#FED7D7',
+    color: 'black',
+    borderRadius: '10px',
+    fontSize: '16px',
+    textAlign: 'center',
+    fontWeight: 600,
+    lineHeight: '20px'
   }
 
   const [accountData, setAccountData] = useState<Profile['data'] | null>(null)
@@ -94,19 +91,28 @@ const useHome = () => {
   )
   const [profileImageUrl, setProfileImageUrl] = useState<string>('')
 
-  const { connect, connectors } = useConnect()
+  const { connect, connectors, isError } = useConnect()
   const { address, isConnected } = useAccount()
   const { data: signedMessage, signMessage } = useSignMessage()
 
   const fetchAccountData = async () => {
-    const response = await client.query({
-      query: GET_PROFILE_QUERY,
-      variables: {
-        handle: userName
-      }
-    })
+    try {
+      const response = await client.query({
+        query: GET_PROFILE_QUERY,
+        variables: {
+          handle: userName
+        }
+      })
 
-    setAccountData(response.data)
+      setAccountData(response.data)
+    } catch (error) {
+      toast.error(
+        "Couldn't fetch account data, verify the Handler and try again.",
+        {
+          style: toastErrorStyles as any
+        }
+      )
+    }
   }
 
   const changePicture = async () => {
@@ -114,6 +120,8 @@ const useHome = () => {
       if (!isConnected) {
         await connect({ connector: connectors[0] })
       }
+
+      if (signedMessage) return changePictureRequest()
 
       // login
       const loginResponse = await client.query({
@@ -136,38 +144,53 @@ const useHome = () => {
   useEffect(() => {
     if (!signedMessage || !address) return
 
-    console.log(
-      '🚀 ~ file: index.tsx ~ line 145 ~ useEffect ~ signedMessage',
-      signedMessage
-    )
-
     // mutation
     const authenticate = async () => {
-      const response = await client.mutate({
-        mutation: AUTH_AUTHENTICATE_MUTATION,
-        variables: {
-          address,
-          signature: signedMessage
+      try {
+        const response = await client.mutate({
+          mutation: AUTH_AUTHENTICATE_MUTATION,
+          variables: {
+            address,
+            signature: signedMessage
+          }
+        })
+
+        if (!response.data.authenticate) {
         }
-      })
 
-      if (!response.data.authenticate) {
-        throw new Error('No authentication')
+        setAuthSecrets(response.data)
+      } catch (e) {
+        toast.error(
+          'Something went wrong with your authentication, please refresh the page and try again.',
+          {
+            style: toastErrorStyles as any
+          }
+        )
       }
-
-      setAuthSecrets(response.data)
     }
 
     authenticate()
   }, [signedMessage, address])
 
   useEffect(() => {
-    if (!authSecrets || !address || !profileImageUrl) return
+    if (!isError) return
 
-    console.log('rodando...')
+    toast.error('Please verify if Metamask is accessible in your browser.', {
+      style: {
+        background: '#FED7D7',
+        color: 'black',
+        borderRadius: '10px',
+        fontSize: '16px',
+        textAlign: 'center',
+        fontWeight: 600,
+        lineHeight: '20px'
+      }
+    })
+  }, [isError])
 
-    const changePicture = async () => {
-      const response = await client.mutate({
+  const changePictureRequest = async () => {
+    try {
+      await client.mutate({
         mutation: CHANGE_PROFILE_IMAGE_MUTATION,
         variables: {
           ProfileId: accountData?.profile.id,
@@ -175,23 +198,35 @@ const useHome = () => {
         },
         context: {
           headers: {
-            authorization: `Bearer ${authSecrets.authenticate.accessToken}`
+            authorization: `Bearer ${authSecrets?.authenticate?.accessToken}`
           }
         }
       })
-
-      if (!response.data.authenticate) {
-        throw new Error('No authentication')
-      }
-
-      setAuthSecrets(response.data)
+    } catch (error) {
+      toast.error(
+        `Request failed with the following error: ${(error as any).message}.`,
+        {
+          style: {
+            background: '#FED7D7',
+            color: 'black',
+            borderRadius: '10px',
+            fontSize: '16px',
+            textAlign: 'center',
+            fontWeight: 600,
+            lineHeight: '20px'
+          }
+        }
+      )
     }
+  }
 
-    changePicture()
+  useEffect(() => {
+    if (!authSecrets || !address || !profileImageUrl) return
+
+    changePictureRequest()
   }, [authSecrets])
 
   return {
-    pingLens,
     setUserName,
     accountData,
     fetchAccountData,
@@ -215,10 +250,13 @@ const HomeWrapper = (props: any) => {
       height={'100vh'}
       position="relative"
     >
-      <Flex pt={6} ml={6}>
+      <Flex pt={6} ml={6} gap={4} alignItems={'center'}>
         <Icon as={BundlrIcon} h={12} w={12} />
+        <Text fontSize={22} fontWeight="extrabold">
+          Lens picture Demo
+        </Text>
       </Flex>
-      <Container maxW={'container.sm'} mt={10}>
+      <Container maxW={'container.sm'} mt={40}>
         <VStack gap={2} shadow="lg" p={4} bg="white" rounded={'md'}>
           {!accountData?.profile?.id && (
             <>
@@ -250,13 +288,18 @@ const HomeWrapper = (props: any) => {
               >
                 <Avatar
                   size="xl"
-                  src={accountData.profile.picture.original.url}
+                  src={accountData?.profile?.picture?.original?.url}
                 />
                 <VStack alignItems={'flex-start'}>
                   <Text fontWeight={'bold'} fontSize="xl">
-                    {accountData?.profile?.name}
+                    {accountData?.profile?.name || 'Anonymous'}
+                    <Text fontSize={'xs'} fontWeight="light">
+                      @{accountData?.profile?.handle}
+                    </Text>
                   </Text>
-                  <Text fontWeight={'light'}>{accountData?.profile?.bio}</Text>
+                  <Text fontWeight={'light'} fontStyle="italic">
+                    {accountData?.profile?.bio || 'No bio provided.'}
+                  </Text>
                 </VStack>
               </HStack>
               <Stack spacing={4} width="full">
