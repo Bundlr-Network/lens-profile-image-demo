@@ -14,12 +14,13 @@ import {
   VStack
 } from '@chakra-ui/react'
 import { SVGProps, useEffect, useState } from 'react'
-import { ethers, utils } from 'ethers';
+import { ethers, utils } from 'ethers'
 import { useAccount, useConnect } from 'wagmi'
 
 import AUTH_AUTHENTICATE_MUTATION from '@/lib/graphql/queries/auth-authenticate'
 import AUTH_CHALLENGE_QUERY from '@/lib/graphql/queries/auth-challenge'
 import { Authentication } from '@/lib/graphql/types/authentication'
+import BROADCAST_IMAGE_MUTATE from '@/lib/graphql/queries/broadcast-image'
 import { BiUser } from 'react-icons/bi'
 import CHANGE_PROFILE_IMAGE_MUTATION from '@/lib/graphql/queries/change-profile-image'
 import { FaRegUserCircle } from 'react-icons/fa'
@@ -76,10 +77,50 @@ const BundlrIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+const ValidatePictureChange = ({
+  typedDataResponse,
+  auth
+}: {
+  typedDataResponse: any
+  auth: any
+}) => {
+  const { signTypedData } = useSignTypedData({
+    domain: typedDataResponse.typedData.domain,
+    types: typedDataResponse.typedData.types,
+    value: typedDataResponse.typedData.value,
+    onSuccess(data) {
+      const registerTransaction = async () => {
+        // isso vai gerar um hash que pode ser usado para checar se completou
+
+        const pictureResponse = await client.mutate({
+          mutation: BROADCAST_IMAGE_MUTATE,
+          variables: {
+            request: {
+              id: typedDataResponse.id,
+              signature: data
+            }
+          },
+          context: {
+            headers: {
+              authorization: `Bearer ${auth?.authenticate?.accessToken}`
+            }
+          }
+        })
+
+        console.log(
+          '🚀 ~ file: index.tsx ~ line 101 ~ registerTransaction ~ pictureResponse',
+          pictureResponse
+        )
+      }
+
+      registerTransaction()
+    }
+  })
+
+  return <Button onClick={signTypedData}>Validate</Button>
+}
+
 const useHome = () => {
-
-  const LENS_CONTRACT = new ethers.Contract("0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d", LENS_HUB_ABI);
-
   const TOAST_ERROR_STYLES = {
     background: '#FED7D7',
     color: 'black',
@@ -95,14 +136,13 @@ const useHome = () => {
   const [authSecrets, setAuthSecrets] = useState<Authentication['data'] | null>(
     null
   )
+  console.log("🚀 ~ file: index.tsx ~ line 140 ~ useHome ~ authSecrets", authSecrets)
   const [profileImageUrl, setProfileImageUrl] = useState<string>('')
   const [typedData, setTypedData] = useState<any>()
 
   const { connect, connectors, isError } = useConnect()
   const { address, isConnected } = useAccount()
   const { data: signedMessage, signMessage } = useSignMessage()
-
-  const { data: signedTypedDataResult, signTypedData } = useSignTypedData()
 
   const fetchAccountData = async () => {
     try {
@@ -156,7 +196,7 @@ const useHome = () => {
     // mutation
     const authenticate = async () => {
       try {
-        const response = await client.mutate({
+        const authResponse = await client.mutate({
           mutation: AUTH_AUTHENTICATE_MUTATION,
           variables: {
             address,
@@ -164,10 +204,18 @@ const useHome = () => {
           }
         })
 
-        if (!response.data.authenticate) {
+        console.log("🚀 ~ file: index.tsx ~ line 206 ~ authenticate ~ authResponse", authResponse)
+
+        if (!authResponse.data.authenticate) {
+          toast.error(
+            'Something went wrong with your authentication response, please refresh the page and try again.',
+            {
+              style: TOAST_ERROR_STYLES as any
+            }
+          )
         }
 
-        setAuthSecrets(response.data)
+        setAuthSecrets(authResponse.data)
       } catch (e) {
         toast.error(
           'Something went wrong with your authentication, please refresh the page and try again.',
@@ -199,6 +247,45 @@ const useHome = () => {
 
   const changePictureRequest = async () => {
     try {
+      // setTypedData({
+      //   id: '745d18ea-73fa-432e-aa1f-72e143ea3c10',
+      //   expiresAt: '2022-02-22T16:48:52.000Z',
+      //   typedData: {
+      //     types: {
+      //       SetProfileImageURIWithSig: [
+      //         {
+      //           name: 'profileId',
+      //           type: 'uint256'
+      //         },
+      //         {
+      //           name: 'imageURI',
+      //           type: 'string'
+      //         },
+      //         {
+      //           name: 'nonce',
+      //           type: 'uint256'
+      //         },
+      //         {
+      //           name: 'deadline',
+      //           type: 'uint256'
+      //         }
+      //       ]
+      //     },
+      //     domain: {
+      //       name: 'Lens Protocol Profile',
+      //       chainId: 137,
+      //       version: '1',
+      //       verifyingContract: '0x23C1ce2b0865406955Da08F1D31c13fcc3f72A3a'
+      //     },
+      //     value: {
+      //       nonce: 0,
+      //       deadline: 1645548532,
+      //       imageURI: 'ipfs://QmSfyMcnh1wnJHrAWCBjZHapTS859oNSsuDFiAPPdAHgHP',
+      //       profileId: '0x03'
+      //     }
+      //   }
+      // })
+
       console.log(1)
       const pictureResponse = await client.mutate({
         mutation: CHANGE_PROFILE_IMAGE_MUTATION,
@@ -217,11 +304,7 @@ const useHome = () => {
       console.log(3)
       const typedDataResponse = result.typedData;
       console.log("🚀 ~ file: index.tsx ~ line 219 ~ changePictureRequest ~ typedDataResponse", typedDataResponse)
-      console.log(4)
-      await signTypedData({ domain: typedDataResponse.domain, types: typedDataResponse.types, value: typedDataResponse.value })
-      console.log(5)
       setTypedData(typedDataResponse)
-      console.log(6)
     } catch (error) {
       toast.error(
         `Request failed with the following error: ${(error as any).message}.`,
@@ -241,35 +324,6 @@ const useHome = () => {
   }
 
   useEffect(() => {
-
-    if (!signedTypedDataResult || !address) return;
-    console.log("🚀 ~ file: index.tsx ~ line 246 ~ useEffect ~ signedTypedDataResult", signedTypedDataResult)
-    console.log(7)
-    const broadcastRequest = async () => {
-
-      const { v, r, s } = utils.splitSignature((signedTypedDataResult as any)?.signature);
-      console.log(8)
-      console.log("🚀 ~ file: index.tsx ~ line 255 ~ broadcastRequest ~ typedData", typedData)
-      console.log("🚀 ~ file: index.tsx ~ line 251 ~ broadcastRequest ~ v", v, r, s)
-
-      await LENS_CONTRACT.setProfileImageURIWithSig({
-        profileId: typedData.value.profileId,
-        imageURI: typedData.value.imageURI,
-        sig: {
-          v,
-          r,
-          s,
-          deadline: typedData.value.deadline,
-        },
-      });
-      console.log(9)
-
-    }
-
-    broadcastRequest()
-  }, [signedTypedDataResult])
-
-  useEffect(() => {
     if (!authSecrets || !address || !profileImageUrl) return
 
     changePictureRequest()
@@ -280,7 +334,9 @@ const useHome = () => {
     accountData,
     fetchAccountData,
     changePicture,
-    setProfileImageUrl
+    setProfileImageUrl,
+    typedData,
+    authSecrets
   }
 }
 
@@ -290,7 +346,9 @@ const HomeWrapper = (props: any) => {
     accountData,
     fetchAccountData,
     changePicture,
-    setProfileImageUrl
+    setProfileImageUrl,
+    typedData,
+    authSecrets
   } = useHome()
 
   return (
@@ -366,6 +424,9 @@ const HomeWrapper = (props: any) => {
               <Button onClick={changePicture} width="full">
                 Change profile picture
               </Button>
+              {typedData && (
+                <ValidatePictureChange typedDataResponse={typedData} auth={authSecrets} />
+              )}
             </>
           )}
         </VStack>
