@@ -384,7 +384,6 @@ const HomeWrapper = (props: any) => {
                     type="tel"
                     placeholder="https://5hcdoh..."
                     onChange={(e) => setProfileImageUrl(e.target.value)}
-                    value={"https://7mzkyootgpk4puvrxi3b6u7rxlsxectosphtvwpumuhq3glrii3q.arweave.net/-zKsOdMz1cfSsbo2H1PxuuVyCm6TzzrZ9GUPDZlxQjc"}
                   />
                 </InputGroup>
               </Stack>
