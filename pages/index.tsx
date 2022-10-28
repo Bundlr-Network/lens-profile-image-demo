@@ -199,7 +199,7 @@ const useHome = () => {
 
   const changePictureRequest = async () => {
     try {
-
+      console.log(1)
       const pictureResponse = await client.mutate({
         mutation: CHANGE_PROFILE_IMAGE_MUTATION,
         variables: {
@@ -212,16 +212,16 @@ const useHome = () => {
           }
         }
       })
-
+      console.log(2)
       const result = pictureResponse.data!.createSetProfileImageURITypedData
-
+      console.log(3)
       const typedDataResponse = result.typedData;
-
-
+      console.log("🚀 ~ file: index.tsx ~ line 219 ~ changePictureRequest ~ typedDataResponse", typedDataResponse)
+      console.log(4)
       signTypedData({ domain: typedDataResponse.domain, types: typedDataResponse.types, value: typedDataResponse.value })
-
+      console.log(5)
       setTypedData(typedDataResponse)
-
+      console.log(6)
     } catch (error) {
       toast.error(
         `Request failed with the following error: ${(error as any).message}.`,
@@ -243,10 +243,14 @@ const useHome = () => {
   useEffect(() => {
 
     if (!signedTypedDataResult || !address) return;
-
+    console.log("🚀 ~ file: index.tsx ~ line 246 ~ useEffect ~ signedTypedDataResult", signedTypedDataResult)
+    console.log(7)
     const broadcastRequest = async () => {
 
       const { v, r, s } = utils.splitSignature((signedTypedDataResult as any)?.signature);
+      console.log(8)
+      console.log("🚀 ~ file: index.tsx ~ line 255 ~ broadcastRequest ~ typedData", typedData)
+      console.log("🚀 ~ file: index.tsx ~ line 251 ~ broadcastRequest ~ v", v, r, s)
 
       await LENS_CONTRACT.setProfileImageURIWithSig({
         profileId: typedData.value.profileId,
@@ -258,6 +262,8 @@ const useHome = () => {
           deadline: typedData.value.deadline,
         },
       });
+      console.log(9)
+
     }
 
     broadcastRequest()
