@@ -218,7 +218,7 @@ const useHome = () => {
       const typedDataResponse = result.typedData;
       console.log("🚀 ~ file: index.tsx ~ line 219 ~ changePictureRequest ~ typedDataResponse", typedDataResponse)
       console.log(4)
-      signTypedData({ domain: typedDataResponse.domain, types: typedDataResponse.types, value: typedDataResponse.value })
+      await signTypedData({ domain: typedDataResponse.domain, types: typedDataResponse.types, value: typedDataResponse.value })
       console.log(5)
       setTypedData(typedDataResponse)
       console.log(6)
