@@ -14,8 +14,7 @@ import {
   VStack
 } from '@chakra-ui/react'
 import { SVGProps, useEffect, useState } from 'react'
-import { ethers, utils } from 'ethers'
-import { useAccount, useConnect, useSigner } from 'wagmi'
+import { useAccount, useConnect } from 'wagmi';
 
 import AUTH_AUTHENTICATE_MUTATION from '@/lib/graphql/queries/auth-authenticate'
 import AUTH_CHALLENGE_QUERY from '@/lib/graphql/queries/auth-challenge'
@@ -24,9 +23,9 @@ import BROADCAST_IMAGE_MUTATE from '@/lib/graphql/queries/broadcast-image'
 import { BiUser } from 'react-icons/bi'
 import CHANGE_PROFILE_IMAGE_MUTATION from '@/lib/graphql/queries/change-profile-image'
 import { FaRegUserCircle } from 'react-icons/fa'
+import FilePicker from '@/components/FilePicker';
 import GET_PROFILE_QUERY from '@/lib/graphql/queries/get-profile'
 import { GetServerSideProps } from 'next'
-import LENS_HUB_ABI from '@/lib/abi/lens-hub.json'
 import { Profile } from '@/lib/graphql/types/profile'
 import client from '@/lib/graphql'
 import toast from 'react-hot-toast'
@@ -84,7 +83,6 @@ const ValidatePictureChange = ({
   signedData: any
   auth: any
 }) => {
-
   delete signedData.typedData.types.__typename
   delete signedData.typedData.value.__typename
   delete signedData.typedData.domain.__typename
@@ -94,37 +92,28 @@ const ValidatePictureChange = ({
     types: signedData.typedData.types,
     value: signedData.typedData.value,
     onSuccess(data) {
-      const registerTransaction = async () => {
-        // isso vai gerar um hash que pode ser usado para checar se completou
-        console.log("putaqparil", data)
-        const pictureResponse = await client.mutate({
-          mutation: BROADCAST_IMAGE_MUTATE,
-          variables: {
-            request: {
-              id: signedData.id,
-              signature: data
-            }
-          },
-          context: {
-            headers: {
-              authorization: `Bearer ${auth?.authenticate?.accessToken}`
-            }
+      return client.mutate({
+        mutation: BROADCAST_IMAGE_MUTATE,
+        variables: {
+          request: {
+            id: signedData.id,
+            signature: data
           }
-        })
-
-        console.log(
-          '🚀 ~ file: index.tsx ~ line 101 ~ registerTransaction ~ pictureResponse',
-          pictureResponse
-        )
-      }
-      console.log("vou rodar")
-      registerTransaction()
-      console.log("ok")
+        },
+        context: {
+          headers: {
+            authorization: `Bearer ${auth?.authenticate?.accessToken}`
+          }
+        }
+      })
     }
   })
 
-  console.log("🚀 ~ file: index.tsx ~ line 123 ~ signTypedData", signTypedData)
-  return <Button onClick={signTypedData}>Validate</Button>
+  return (
+    <Button onClick={signTypedData} width="full">
+      Change picture
+    </Button>
+  )
 }
 
 const useHome = () => {
@@ -143,7 +132,7 @@ const useHome = () => {
   const [authSecrets, setAuthSecrets] = useState<Authentication['data'] | null>(
     null
   )
-  console.log("🚀 ~ file: index.tsx ~ line 140 ~ useHome ~ authSecrets", authSecrets)
+
   const [profileImageUrl, setProfileImageUrl] = useState<string>('')
   const [typedData, setTypedData] = useState<any>()
 
@@ -211,8 +200,6 @@ const useHome = () => {
           }
         })
 
-        console.log("🚀 ~ file: index.tsx ~ line 206 ~ authenticate ~ authResponse", authResponse)
-
         if (!authResponse.data.authenticate) {
           toast.error(
             'Something went wrong with your authentication response, please refresh the page and try again.',
@@ -254,7 +241,6 @@ const useHome = () => {
 
   const changePictureRequest = async () => {
     try {
-      console.log(1)
       const pictureResponse = await client.mutate({
         mutation: CHANGE_PROFILE_IMAGE_MUTATION,
         variables: {
@@ -267,9 +253,9 @@ const useHome = () => {
           }
         }
       })
-      console.log(2)
+
       const result = pictureResponse.data!.createSetProfileImageURITypedData
-      console.log(3)
+
       setTypedData(result)
     } catch (error) {
       toast.error(
@@ -300,9 +286,11 @@ const useHome = () => {
     accountData,
     fetchAccountData,
     changePicture,
+    profileImageUrl,
     setProfileImageUrl,
     typedData,
-    authSecrets
+    authSecrets,
+    setAccountData
   }
 }
 
@@ -312,9 +300,11 @@ const HomeWrapper = (props: any) => {
     accountData,
     fetchAccountData,
     changePicture,
+    profileImageUrl,
     setProfileImageUrl,
     typedData,
-    authSecrets
+    authSecrets,
+    setAccountData
   } = useHome()
 
   return (
@@ -323,7 +313,7 @@ const HomeWrapper = (props: any) => {
       height={'100vh'}
       position="relative"
     >
-      <Flex pt={6} ml={6} gap={4} alignItems={'center'}>
+      <Flex pt={6} ml={6} gap={4} alignItems={'center'} onClick={() => setAccountData(null)} cursor="pointer">
         <Icon as={BundlrIcon} h={12} w={12} />
         <Text fontSize={22} fontWeight="extrabold">
           Lens picture Demo
@@ -357,26 +347,29 @@ const HomeWrapper = (props: any) => {
                 background="gray.100"
                 width={'full'}
                 rounded="lg"
-                p={10}
+                p={6}
               >
                 <Avatar
                   size="xl"
                   src={accountData?.profile?.picture?.original?.url}
                 />
                 <VStack alignItems={'flex-start'}>
-                  <Text fontWeight={'bold'} fontSize="xl">
-                    {accountData?.profile?.name || 'Anonymous'}
+                  <Box>
+                    <Text fontWeight={'bold'} fontSize="xl">
+                      {accountData?.profile?.name || 'Anonymous'}
+                    </Text>
                     <Text fontSize={'xs'} fontWeight="light">
                       @{accountData?.profile?.handle}
                     </Text>
-                  </Text>
-                  <Text fontWeight={'light'} fontStyle="italic">
+                  </Box>
+
+                  <Text fontWeight={'light'} fontStyle="italic" color={"gray.500"}>
                     {accountData?.profile?.bio || 'No bio provided.'}
                   </Text>
                 </VStack>
               </HStack>
               <Stack spacing={4} width="full">
-                <InputGroup>
+                {/* <InputGroup>
                   <InputLeftElement pointerEvents="none">
                     <FaRegUserCircle />
                   </InputLeftElement>
@@ -385,13 +378,19 @@ const HomeWrapper = (props: any) => {
                     placeholder="https://5hcdoh..."
                     onChange={(e) => setProfileImageUrl(e.target.value)}
                   />
-                </InputGroup>
+                </InputGroup> */}
+                <FilePicker setProfileImageUrl={setProfileImageUrl} />
               </Stack>
-              <Button onClick={changePicture} width="full">
-                Change profile picture
-              </Button>
+              {!typedData && (
+                <Button onClick={changePicture} width="full" disabled={!profileImageUrl}>
+                  Authenticate
+                </Button>
+              )}
               {typedData && (
-                <ValidatePictureChange signedData={typedData} auth={authSecrets} />
+                <ValidatePictureChange
+                  signedData={typedData}
+                  auth={authSecrets}
+                />
               )}
             </>
           )}

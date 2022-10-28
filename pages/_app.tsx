@@ -1,10 +1,8 @@
 import { ApolloProvider } from '@apollo/client'
 import type { AppProps } from 'next/app'
 import { ChakraProvider } from "@chakra-ui/react"
-import { Component } from 'react'
 import NextNProgress from 'nextjs-progressbar'
 import { Toaster } from 'react-hot-toast'
-import { WagmiConfig } from 'wagmi'
 import WagmiWrapper from '@/lib/wagmi/wagmi'
 import client from '@/lib/graphql'
 
