@@ -15,7 +15,7 @@ import {
 } from '@chakra-ui/react'
 import { SVGProps, useEffect, useState } from 'react'
 import { ethers, utils } from 'ethers'
-import { useAccount, useConnect } from 'wagmi'
+import { useAccount, useConnect, useSigner } from 'wagmi'
 
 import AUTH_AUTHENTICATE_MUTATION from '@/lib/graphql/queries/auth-authenticate'
 import AUTH_CHALLENGE_QUERY from '@/lib/graphql/queries/auth-challenge'
@@ -78,25 +78,30 @@ const BundlrIcon = (props: SVGProps<SVGSVGElement>) => (
 )
 
 const ValidatePictureChange = ({
-  typedDataResponse,
+  signedData,
   auth
 }: {
-  typedDataResponse: any
+  signedData: any
   auth: any
 }) => {
+
+  delete signedData.typedData.types.__typename
+  delete signedData.typedData.value.__typename
+  delete signedData.typedData.domain.__typename
+
   const { signTypedData } = useSignTypedData({
-    domain: typedDataResponse.typedData.domain,
-    types: typedDataResponse.typedData.types,
-    value: typedDataResponse.typedData.value,
+    domain: signedData.typedData.domain,
+    types: signedData.typedData.types,
+    value: signedData.typedData.value,
     onSuccess(data) {
       const registerTransaction = async () => {
         // isso vai gerar um hash que pode ser usado para checar se completou
-
+        console.log("putaqparil", data)
         const pictureResponse = await client.mutate({
           mutation: BROADCAST_IMAGE_MUTATE,
           variables: {
             request: {
-              id: typedDataResponse.id,
+              id: signedData.id,
               signature: data
             }
           },
@@ -112,11 +117,13 @@ const ValidatePictureChange = ({
           pictureResponse
         )
       }
-
+      console.log("vou rodar")
       registerTransaction()
+      console.log("ok")
     }
   })
 
+  console.log("🚀 ~ file: index.tsx ~ line 123 ~ signTypedData", signTypedData)
   return <Button onClick={signTypedData}>Validate</Button>
 }
 
@@ -132,7 +139,7 @@ const useHome = () => {
   }
 
   const [accountData, setAccountData] = useState<Profile['data'] | null>(null)
-  const [userName, setUserName] = useState('Dejen.lens')
+  const [userName, setUserName] = useState('the_bundloooord.lens')
   const [authSecrets, setAuthSecrets] = useState<Authentication['data'] | null>(
     null
   )
@@ -247,45 +254,6 @@ const useHome = () => {
 
   const changePictureRequest = async () => {
     try {
-      // setTypedData({
-      //   id: '745d18ea-73fa-432e-aa1f-72e143ea3c10',
-      //   expiresAt: '2022-02-22T16:48:52.000Z',
-      //   typedData: {
-      //     types: {
-      //       SetProfileImageURIWithSig: [
-      //         {
-      //           name: 'profileId',
-      //           type: 'uint256'
-      //         },
-      //         {
-      //           name: 'imageURI',
-      //           type: 'string'
-      //         },
-      //         {
-      //           name: 'nonce',
-      //           type: 'uint256'
-      //         },
-      //         {
-      //           name: 'deadline',
-      //           type: 'uint256'
-      //         }
-      //       ]
-      //     },
-      //     domain: {
-      //       name: 'Lens Protocol Profile',
-      //       chainId: 137,
-      //       version: '1',
-      //       verifyingContract: '0x23C1ce2b0865406955Da08F1D31c13fcc3f72A3a'
-      //     },
-      //     value: {
-      //       nonce: 0,
-      //       deadline: 1645548532,
-      //       imageURI: 'ipfs://QmSfyMcnh1wnJHrAWCBjZHapTS859oNSsuDFiAPPdAHgHP',
-      //       profileId: '0x03'
-      //     }
-      //   }
-      // })
-
       console.log(1)
       const pictureResponse = await client.mutate({
         mutation: CHANGE_PROFILE_IMAGE_MUTATION,
@@ -302,9 +270,7 @@ const useHome = () => {
       console.log(2)
       const result = pictureResponse.data!.createSetProfileImageURITypedData
       console.log(3)
-      const typedDataResponse = result.typedData;
-      console.log("🚀 ~ file: index.tsx ~ line 219 ~ changePictureRequest ~ typedDataResponse", typedDataResponse)
-      setTypedData(typedDataResponse)
+      setTypedData(result)
     } catch (error) {
       toast.error(
         `Request failed with the following error: ${(error as any).message}.`,
@@ -418,6 +384,7 @@ const HomeWrapper = (props: any) => {
                     type="tel"
                     placeholder="https://5hcdoh..."
                     onChange={(e) => setProfileImageUrl(e.target.value)}
+                    value={"https://7mzkyootgpk4puvrxi3b6u7rxlsxectosphtvwpumuhq3glrii3q.arweave.net/-zKsOdMz1cfSsbo2H1PxuuVyCm6TzzrZ9GUPDZlxQjc"}
                   />
                 </InputGroup>
               </Stack>
@@ -425,7 +392,7 @@ const HomeWrapper = (props: any) => {
                 Change profile picture
               </Button>
               {typedData && (
-                <ValidatePictureChange typedDataResponse={typedData} auth={authSecrets} />
+                <ValidatePictureChange signedData={typedData} auth={authSecrets} />
               )}
             </>
           )}
