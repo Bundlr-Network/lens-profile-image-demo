@@ -14,7 +14,7 @@ import {
   VStack
 } from '@chakra-ui/react'
 import { SVGProps, useEffect, useState } from 'react'
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect } from 'wagmi'
 
 import AUTH_AUTHENTICATE_MUTATION from '@/lib/graphql/queries/auth-authenticate'
 import AUTH_CHALLENGE_QUERY from '@/lib/graphql/queries/auth-challenge'
@@ -23,7 +23,7 @@ import BROADCAST_IMAGE_MUTATE from '@/lib/graphql/queries/broadcast-image'
 import { BiUser } from 'react-icons/bi'
 import CHANGE_PROFILE_IMAGE_MUTATION from '@/lib/graphql/queries/change-profile-image'
 import { FaRegUserCircle } from 'react-icons/fa'
-import FilePicker from '@/components/FilePicker';
+import FilePicker from '@/components/FilePicker'
 import GET_PROFILE_QUERY from '@/lib/graphql/queries/get-profile'
 import { GetServerSideProps } from 'next'
 import { Profile } from '@/lib/graphql/types/profile'
@@ -83,6 +83,14 @@ const ValidatePictureChange = ({
   signedData: any
   auth: any
 }) => {
+  enum ValidatePictureStauts {
+    Loading,
+    Success,
+    Idle
+  }
+
+  const [buttonStatus, setButtonStatus] = useState(ValidatePictureStauts.Idle)
+
   delete signedData.typedData.types.__typename
   delete signedData.typedData.value.__typename
   delete signedData.typedData.domain.__typename
@@ -92,6 +100,18 @@ const ValidatePictureChange = ({
     types: signedData.typedData.types,
     value: signedData.typedData.value,
     onSuccess(data) {
+      setButtonStatus(ValidatePictureStauts.Success)
+      toast.success("Picture changed successfully! The changes will be visible in a few seconds.", {
+        style: {
+          background: '#C6F6D5',
+          color: 'black',
+          borderRadius: '10px',
+          fontSize: '16px',
+          textAlign: 'center',
+          fontWeight: 600,
+          lineHeight: '20px'
+        }
+      })
       return client.mutate({
         mutation: BROADCAST_IMAGE_MUTATE,
         variables: {
@@ -109,8 +129,18 @@ const ValidatePictureChange = ({
     }
   })
 
+  const handleClick = async () => {
+    setButtonStatus(ValidatePictureStauts.Loading)
+    signTypedData()
+  }
+
   return (
-    <Button onClick={signTypedData} width="full">
+    <Button
+      onClick={handleClick}
+      width="full"
+      isLoading={buttonStatus === ValidatePictureStauts.Loading}
+      isDisabled={buttonStatus === ValidatePictureStauts.Success}
+    >
       Change picture
     </Button>
   )
@@ -313,7 +343,14 @@ const HomeWrapper = (props: any) => {
       height={'100vh'}
       position="relative"
     >
-      <Flex pt={6} ml={6} gap={4} alignItems={'center'} onClick={() => setAccountData(null)} cursor="pointer">
+      <Flex
+        pt={6}
+        ml={6}
+        gap={4}
+        alignItems={'center'}
+        onClick={() => setAccountData(null)}
+        cursor="pointer"
+      >
         <Icon as={BundlrIcon} h={12} w={12} />
         <Text fontSize={22} fontWeight="extrabold">
           Lens picture Demo
@@ -363,28 +400,29 @@ const HomeWrapper = (props: any) => {
                     </Text>
                   </Box>
 
-                  <Text fontWeight={'light'} fontStyle="italic" color={"gray.500"}>
+                  <Text
+                    fontWeight={'light'}
+                    fontStyle="italic"
+                    color={'gray.500'}
+                  >
                     {accountData?.profile?.bio || 'No bio provided.'}
                   </Text>
                 </VStack>
               </HStack>
-              <Stack spacing={4} width="full">
-                {/* <InputGroup>
-                  <InputLeftElement pointerEvents="none">
-                    <FaRegUserCircle />
-                  </InputLeftElement>
-                  <Input
-                    type="tel"
-                    placeholder="https://5hcdoh..."
-                    onChange={(e) => setProfileImageUrl(e.target.value)}
-                  />
-                </InputGroup> */}
-                <FilePicker setProfileImageUrl={setProfileImageUrl} />
-              </Stack>
+
               {!typedData && (
-                <Button onClick={changePicture} width="full" disabled={!profileImageUrl}>
-                  Authenticate
-                </Button>
+                <>
+                  <Stack spacing={4} width="full">
+                    <FilePicker setProfileImageUrl={setProfileImageUrl} />
+                  </Stack>
+                  <Button
+                    onClick={changePicture}
+                    width="full"
+                    disabled={!profileImageUrl}
+                  >
+                    Authenticate
+                  </Button>
+                </>
               )}
               {typedData && (
                 <ValidatePictureChange
