@@ -22,7 +22,7 @@ const FilePicker = ({
 }) => {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const handleClick = () => inputRef.current?.click()
-  const [status, setStatus] = useState(Status.Loading)
+  const [status, setStatus] = useState(Status.Idle)
 
   const TOAST_ERROR_STYLES = {
     background: '#FED7D7',
