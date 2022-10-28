@@ -48,6 +48,26 @@ const FilePicker = ({
       // @ts-ignore
       await window.ethereum.enable()
 
+      try {
+        // @ts-ignore
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x89' }],
+        });
+      } catch (e: any) {
+        if (e.code === 4902) {
+          // @ts-ignore
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x89',
+              chainName: 'Polygon Mainnet',
+              rpcUrls: ['https://polygon-rpc.com'],
+            }],
+          });
+        }
+      }
+
       // @ts-ignore
       const provider = new providers.Web3Provider(window.ethereum)
 
