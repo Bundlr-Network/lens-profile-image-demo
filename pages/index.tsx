@@ -102,6 +102,7 @@ const ValidatePictureChange = ({
     onSuccess(data) {
       setButtonStatus(ValidatePictureStauts.Success)
       toast.success("Picture changed successfully! The changes will be visible in a few seconds.", {
+        duration: 5000,
         style: {
           background: '#C6F6D5',
           color: 'black',
@@ -110,7 +111,7 @@ const ValidatePictureChange = ({
           textAlign: 'center',
           fontWeight: 600,
           lineHeight: '20px'
-        }
+        },
       })
       return client.mutate({
         mutation: BROADCAST_IMAGE_MUTATE,
